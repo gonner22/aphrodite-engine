@@ -45,6 +45,7 @@ if triton.__version__ >= "2.1.0":
         stride_v_cache_h,
         stride_v_cache_d,
         stride_v_cache_bl,
+        num_queries_per_kv: int,
         BLOCK_M: tl.constexpr,
         BLOCK_DMODEL: tl.constexpr,
         BLOCK_N: tl.constexpr,
@@ -52,6 +53,8 @@ if triton.__version__ >= "2.1.0":
         cur_batch = tl.program_id(0)
         cur_head = tl.program_id(1)
         start_m = tl.program_id(2)
+
+        cur_kv_head = cur_head // num_queries_per_kv
 
         cur_batch_ctx_len = tl.load(B_Ctxlen + cur_batch)
         cur_batch_seq_len = tl.load(B_Seqlen + cur_batch)
@@ -85,14 +88,14 @@ if triton.__version__ >= "2.1.0":
                          mask=(start_n + offs_n) < cur_batch_ctx_len,
                          other=0)
             off_k = (bn[None, :] * stride_k_cache_bs +
-                     cur_head * stride_k_cache_h +
+                     cur_kv_head * stride_k_cache_h +
                      (offs_d[:, None] // x) * stride_k_cache_d +
                      ((start_n + offs_n[None, :]) % block_size) *
                      stride_k_cache_bl +
                      (offs_d[:, None] % x) * stride_k_cache_x)
             off_v = (
-                bn[:, None] * stride_v_cache_bs + cur_head * stride_v_cache_h +
-                offs_d[None, :] * stride_v_cache_d +
+                bn[:, None] * stride_v_cache_bs +
+                cur_kv_head * stride_v_cache_h +
                 (start_n + offs_n[:, None]) % block_size * stride_v_cache_bl)
             k = tl.load(K_cache + off_k,
                         mask=(start_n + offs_n[None, :]) < cur_batch_ctx_len,
@@ -131,9 +134,9 @@ if triton.__version__ >= "2.1.0":
             l_i = l_i_new
             m_i = m_i_new
 
-        off_k = (offs_n[None, :] * stride_kbs + cur_head * stride_kh +
+        off_k = (offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh +
                  offs_d[:, None] * stride_kd)
-        off_v = (offs_n[:, None] * stride_vbs + cur_head * stride_vh +
+        off_v = (offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh +
                  offs_d[None, :] * stride_vd)
         k_ptrs = K + off_k
         v_ptrs = V + off_v
@@ -232,6 +235,7 @@ if triton.__version__ >= "2.1.0":
         stride_v_cache_h,
         stride_v_cache_d,
         stride_v_cache_bl,
+        num_queries_per_kv: int,
         BLOCK_M: tl.constexpr,
         BLOCK_DMODEL: tl.constexpr,
         BLOCK_N: tl.constexpr,
@@ -239,6 +243,8 @@ if triton.__version__ >= "2.1.0":
         cur_batch = tl.program_id(0)
         cur_head = tl.program_id(1)
         start_m = tl.program_id(2)
+
+        cur_kv_head = cur_head // num_queries_per_kv
 
         cur_batch_ctx_len = tl.load(B_Ctxlen + cur_batch)
         cur_batch_seq_len = tl.load(B_Seqlen + cur_batch)
@@ -272,13 +278,14 @@ if triton.__version__ >= "2.1.0":
                          mask=(start_n + offs_n) < cur_batch_ctx_len,
                          other=0)
             off_k = (bn[None, :] * stride_k_cache_bs +
-                     cur_head * stride_k_cache_h +
+                     cur_kv_head * stride_k_cache_h +
                      (offs_d[:, None] // x) * stride_k_cache_d +
                      ((start_n + offs_n[None, :]) % block_size) *
                      stride_k_cache_bl +
                      (offs_d[:, None] % x) * stride_k_cache_x)
             off_v = (
-                bn[:, None] * stride_v_cache_bs + cur_head * stride_v_cache_h +
+                bn[:, None] * stride_v_cache_bs +
+                cur_kv_head * stride_v_cache_h +
                 offs_d[None, :] * stride_v_cache_d +
                 (start_n + offs_n[:, None]) % block_size * stride_v_cache_bl)
             k = tl.load(K_cache + off_k,
@@ -317,9 +324,9 @@ if triton.__version__ >= "2.1.0":
             l_i = l_i_new
             m_i = m_i_new
 
-        off_k = (offs_n[None, :] * stride_kbs + cur_head * stride_kh +
+        off_k = (offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh +
                  offs_d[:, None] * stride_kd)
-        off_v = (offs_n[:, None] * stride_vbs + cur_head * stride_vh +
+        off_v = (offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh +
                  offs_d[None, :] * stride_vd)
         k_ptrs = K + off_k
         v_ptrs = V + off_v
@@ -420,6 +427,7 @@ if triton.__version__ >= "2.1.0":
         stride_v_cache_h,
         stride_v_cache_d,
         stride_v_cache_bl,
+        num_queries_per_kv: int,
         BLOCK_M: tl.constexpr,
         BLOCK_DMODEL: tl.constexpr,
         BLOCK_N: tl.constexpr,
@@ -428,6 +436,8 @@ if triton.__version__ >= "2.1.0":
         cur_batch = tl.program_id(0)
         cur_head = tl.program_id(1)
         start_m = tl.program_id(2)
+
+        cur_kv_head = cur_head // num_queries_per_kv
 
         # cur_batch_seq_len: the length of prompts
         # cur_batch_ctx_len: the length of prefix
@@ -468,13 +478,14 @@ if triton.__version__ >= "2.1.0":
                          mask=(start_n + offs_n) < cur_batch_ctx_len,
                          other=0)
             off_k = (bn[None, :] * stride_k_cache_bs +
-                     cur_head * stride_k_cache_h +
+                     cur_kv_head * stride_k_cache_h +
                      (offs_d[:, None] // x) * stride_k_cache_d +
                      ((start_n + offs_n[None, :]) % block_size) *
                      stride_k_cache_bl +
                      (offs_d[:, None] % x) * stride_k_cache_x)
             off_v = (
-                bn[:, None] * stride_v_cache_bs + cur_head * stride_v_cache_h +
+                bn[:, None] * stride_v_cache_bs +
+                cur_kv_head * stride_v_cache_h +
                 offs_d[None, :] * stride_v_cache_d +
                 (start_n + offs_n[:, None]) % block_size * stride_v_cache_bl)
             k = tl.load(K_cache + off_k,
@@ -522,9 +533,9 @@ if triton.__version__ >= "2.1.0":
             l_i = l_i_new
             m_i = m_i_new
 
-        off_k = (offs_n[None, :] * stride_kbs + cur_head * stride_kh +
+        off_k = (offs_n[None, :] * stride_kbs + cur_kv_head * stride_kh +
                  offs_d[:, None] * stride_kd)
-        off_v = (offs_n[:, None] * stride_vbs + cur_head * stride_vh +
+        off_v = (offs_n[:, None] * stride_vbs + cur_kv_head * stride_vh +
                  offs_d[None, :] * stride_vd)
         k_ptrs = K + off_k
         v_ptrs = V + off_v
@@ -627,6 +638,7 @@ if triton.__version__ >= "2.1.0":
 
         sm_scale = 1.0 / (Lq**0.5)
         batch, head = b_seq_len.shape[0], q.shape[1]
+        num_queries_per_kv = q.shape[1] // k.shape[1]
 
         grid = (batch, head, triton.cdiv(max_input_len, BLOCK))  # batch, head,
 
@@ -673,6 +685,7 @@ if triton.__version__ >= "2.1.0":
                 v_cache.stride(2),
                 v_cache.stride(
                     3),  #[num_blocks, num_kv_heads, head_size, block_size]
+                num_queries_per_kv=num_queries_per_kv,
                 BLOCK_M=BLOCK,
                 BLOCK_DMODEL=Lk,
                 BLOCK_N=BLOCK,
@@ -720,6 +733,7 @@ if triton.__version__ >= "2.1.0":
             v_cache.stride(2),
             v_cache.stride(
                 3),  #[num_blocks, num_kv_heads, head_size, block_size]
+            num_queries_per_kv=num_queries_per_kv,
             BLOCK_M=BLOCK,
             BLOCK_DMODEL=Lk,
             BLOCK_N=BLOCK,
