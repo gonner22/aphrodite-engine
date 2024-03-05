@@ -1,3 +1,4 @@
+import time
 from aphrodite import LLM, SamplingParams
 
 prefix = (
@@ -22,14 +23,16 @@ prompts = [
 sampling_params = SamplingParams(temperature=0.0)
 
 # Create an LLM.
-llm = LLM(model="EleutherAI/pythia-70m-deduped")
+llm = LLM(model="mistralai/Mistral-7B-Instruct-v0.2")
 
 generating_prompts = [prefix + prompt for prompt in prompts]
 
-# Generate texts from the prompts. The output is a list of RequestOutput objects
-# that contain the prompt, generated text, and other information.
+# Generation without prefix caching
+start_time = time.time()
 outputs = llm.generate(generating_prompts, sampling_params)
-# Print the outputs.
+end_time = time.time()
+print(f"Time taken without prefix caching: {end_time - start_time} seconds")
+
 for output in outputs:
     prompt = output.prompt
     generated_text = output.outputs[0].text
@@ -37,22 +40,20 @@ for output in outputs:
 
 print("-" * 80)
 
-# -1 since the last token can change when concatenating prompts.
+# Generation with prefix caching
 prefix_pos = len(llm.llm_engine.tokenizer.encode(prefix)) - 1
 
-# The llm.generate call will batch all prompts and send the batch at once if resources allow.
-# The prefix will only be cached after the first batch is processed, so we need to call generate once
-# to calculate the prefix and cache it.
+start_time = time.time()
 outputs = llm.generate(generating_prompts[0],
                        sampling_params,
                        prefix_pos=[prefix_pos])
 
-# Subsequent batches can leverage the cached prefix
 outputs = llm.generate(generating_prompts,
                        sampling_params,
                        prefix_pos=[prefix_pos] * len(generating_prompts))
+end_time = time.time()
+print(f"Time taken with prefix caching: {end_time - start_time} seconds")
 
-# Print the outputs. You should see the same outputs as before
 for output in outputs:
     prompt = output.prompt
     generated_text = output.outputs[0].text

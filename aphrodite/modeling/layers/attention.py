@@ -157,6 +157,7 @@ class PagedAttention(nn.Module):
                                                   self.num_kv_heads,
                                                   self.num_queries_per_kv,
                                                   value.shape[-1])
+
                 # Set attention bias if not provided. This typically happens at
                 # the very attention layer of every iteration.
                 # FIXME: This is a hack.
@@ -179,6 +180,8 @@ class PagedAttention(nn.Module):
                         key,
                         value,
                     )
+                    # Using view got RuntimeError: view size is not compatible with input tensor's size and stride
+                    # (at least one dimension spans across two contiguous subspaces). Use reshape instead
                     return output.reshape(batch_size, seq_len, hidden_size)
 
                 # TODO: Too many view operations. Let's try to reduce

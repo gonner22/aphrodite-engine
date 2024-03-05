@@ -1,13 +1,12 @@
 import random
 import pytest
 import time
+
 import torch
-
-from xformers import ops as xops
-from xformers.ops.fmha.attn_bias import BlockDiagonalCausalFromBottomRightMask
-
 from aphrodite.modeling.layers.triton_kernel.prefix_prefill import (
     context_attention_fwd)
+from xformers import ops as xops
+from xformers.ops.fmha.attn_bias import BlockDiagonalCausalFromBottomRightMask
 
 NUM_HEADS = [64]
 NUM_QUERIES_PER_KV = [1, 8, 64]
@@ -114,6 +113,7 @@ def test_contexted_kv_attention(
     # to V_cache[num_blocks, num_kv_heads, head_size, block_size]
     v_cache = v_cache.view(-1, block_size, num_kv_heads,
                            head_size).permute(0, 2, 3, 1).contiguous()
+                           
 
     # Warm up the Triton kernel by calling it once before actually measuring generation time
     context_attention_fwd(query, k, v, output, k_cache, v_cache, block_table,
@@ -125,6 +125,7 @@ def test_contexted_kv_attention(
     torch.cuda.synchronize()
     end_time = time.time()
     print(f"triton Time: {(end_time - start_time)*1000:.2f} ms")
+
     scale = float(1.0 / (head_size**0.5))
 
     attn_op = xops.fmha.cutlass.FwOp()
