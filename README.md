@@ -42,13 +42,29 @@ You can play around with the engine in the demo here:
 
 ### Docker
 
-Additionally, we provide a Docker image for easy deployment. Here's a basic command to get you started:
+We provide the flexibility of a Docker container, enabling it to interact with another Docker container (Worker) through a specific Docker network via internal port 7860. Additionally, it has the capability to communicate with the host via port 2242, if the worker is not containerized.
 
+#### Create a Docker Network
 ```sh
-sudo docker run -d -e MODEL_NAME="mistralai/Mistral-7B-Instruct-v0.2" -p 2242:7860 --gpus all --ipc host alpindale/aphrodite-engine
+docker network create <network_name>
 ```
 
-This will pull the Aphrodite Engine image (~9GiB download), and launch the engine with the Mistral-7B model at port 2242. Check [here](/docker/.env) for the full list of env variables.
+#### Running Aphrodite Engine Docker Container
+To deploy Aphrodite Engine using Docker, execute the following command:
+
+```sh
+docker run -it -p 2242:7860 --network <networ_name> --gpus "all" --shm-size 8g --name <container_name> -e MODEL_NAME="PygmalionAI/pygmalion-2-7b" -e KOBOLD_API="true" alpindale/aphrodite-engine
+```
+This command launches the Aphrodite Engine Docker container with the following configurations:
+
+- It joins the Docker network named `<network_name>`.
+- Utilizes all available GPUs for processing. Alternatively, you can specify a specific GPU card number (e.g., `'1'` to select GPU number 1). Sets the shared memory size to 8 GB.
+- Maps port 2242 on the host to port 7860 internally within the container. The internal port should correspond to the port specified in the worker's bridgeData.yaml if it is containerized.
+- Starts the container in interactive mode (-it) with the name `<container_name>`.
+- Specifies environment variables `MODEL_NAME` and `KOBOLD_API` for the Aphrodite Engine.
+- Uses the Docker image `alpindale/aphrodite-engine`.
+
+This command will download the Aphrodite Engine image (approximately 9GiB) and then launch the engine with the `Pygmalion-2-7b model` on port 7860 (internal) and port 2242 (external). For the complete list of environment variables, please refer to [here](/docker/.env)
 
 See [here](/docker/docker-compose.yml) for the Compose file to use with Docker Compose.
 
